@@ -75,7 +75,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
       <div class="card" style="margin-top:14px">
         <div class="sectiontitle">Current calculated demand</div>
         <div id="stats"></div>
-        <div class="note">Orange = 80–100% of screening value. Red = above screening value. <strong>The red rope joint at the end of the gallows is different: it is always shown red to identify the primary load-application / high-demand point. Its red color does NOT mean that connection has exceeded an estimated capacity.</strong> These are preliminary engineering screens, not certified capacities.</div>
+        <div class="note">Orange = 80–100% of screening value. Red = above screening value. <strong>The red rope joint at the end of the gallows is different: it is always shown red to identify the primary load-application / high-demand point. Its red color does NOT mean that connection has exceeded an estimated capacity.</strong> Corner-load calculations include the 5 ft plan offset from the tower centerline and the rope point's full centerline eccentricity. These are preliminary engineering screens, not certified capacities.</div>
       </div>
     </div>
   </div>
@@ -83,7 +83,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Attachment / member assumptions</div>
     <div class="small">
-      Bottom brace → 3×3×3/16 in angle tower leg · Top beam → 2×2×3/16 in angle handrail · Upper cable → 2×2×3/16 in roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Cable → 1/4 in 7×19 stainless, 500 lb default pretension · Rope reach → 99.5 in · Lower brace → ~12 ft · Brace angle → 46.4°
+      CORNER MOUNT: gallows is attached at one tower corner/leg, not at the face centerline · Bottom brace → 3×3×3/16 in angle tower leg · Top beam → 2×2×3/16 in angle handrail · Upper cable → 2×2×3/16 in roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Cable → 1/4 in 7×19 stainless, 500 lb default pretension · Rope reach → 99.5 in · Lower brace → ~12 ft · Brace angle → 46.4°
     </div>
     <div class="note">Screening values depend heavily on actual unsupported span, connection geometry, bolt grade/layout, welds, eccentricity, corrosion and anchorage. A structural engineer should replace these estimates with measured capacities before anyone climbs on it.</div>
   </div>
@@ -133,7 +133,7 @@ function arrow(a,b,color,width=3){
   ctx.beginPath();ctx.moveTo(B[0],B[1]);ctx.lineTo(B[0]-len*Math.cos(ang-.45),B[1]-len*Math.sin(ang-.45));ctx.lineTo(B[0]-len*Math.cos(ang+.45),B[1]-len*Math.sin(ang+.45));ctx.closePath();ctx.fillStyle=color;ctx.fill();
 }
 
-const zTop=26, base=15, top=10, reach=99.5/12, beamZ=30, face=-5, tip=face-reach, lowerZ=beamZ-104.5/12, wireZ=34;
+const zTop=26, base=15, top=10, reach=99.5/12, beamZ=30, face=-5, cornerY=-5, tip=face-reach, lowerZ=beamZ-104.5/12, wireZ=34;
 function interp(s,z){return base+(top-base)*(z/zTop)}
 function draw(){
   ctx.clearRect(0,0,box.clientWidth,box.clientHeight);
@@ -160,23 +160,23 @@ function draw(){
   line([-5,4.5,26],[-5,4.5,30],'#4f6f8f',2);
   line([-5,-4.5,30],[-5,4.5,30],'#4f6f8f',2);
 
-  line([face+4,0,beamZ],[tip,0,beamZ],'#b78a4f',5);
-  line([face,0,lowerZ],[tip,0,beamZ],'#b78a4f',5);
-  line([face,0,wireZ],[tip,0,beamZ],'#7a7f86',2,[5,4]);
-  line([tip,0,beamZ],[tip,0,3],'#7d5c35',3);
+  line([face+4,cornerY,beamZ],[tip,cornerY,beamZ],'#b78a4f',5);
+  line([face,cornerY,lowerZ],[tip,cornerY,beamZ],'#b78a4f',5);
+  line([face,cornerY,wireZ],[tip,cornerY,beamZ],'#7a7f86',2,[5,4]);
+  line([tip,cornerY,beamZ],[tip,cornerY,3],'#7d5c35',3);
 
   line([5.3,5,2],[5.3,-4,25],'#4f6f8f',2); line([7.4,5,2],[7.4,-4,25],'#4f6f8f',2);
   for(let i=0;i<13;i++){let t=i/12;let z=3+22*t;let y=4.5-8*t;line([5.3,y,z],[7.4,y,z],'#4f6f8f',1.5)}
 
   const vals=calc();
   const downLen=Math.min(5,1.2+vals.P/200), sideLen=Math.min(4,0.7+vals.H/120);
-  arrow([tip,0,beamZ],[tip,0,beamZ-downLen],'#c43d3d',3);
-  arrow([tip,0,beamZ],[tip,sideLen,beamZ],'#c58a00',3);
+  arrow([tip,cornerY,beamZ],[tip,cornerY,beamZ-downLen],'#c43d3d',3);
+  arrow([tip,cornerY,beamZ],[tip,cornerY+sideLen,beamZ],'#c58a00',3);
 
-  circle([tip,0,beamZ],5,'#c43d3d','rope joint');
-  circle([face,0,beamZ],5,statusColor(vals.topDemand,343),'top/handrail');
-  circle([face,0,lowerZ],5,statusColor(vals.braceDemand,794),'lower/tower leg');
-  circle([face,0,wireZ],5,statusColor(vals.cableDemand,980),'roof cable joint');
+  circle([tip,cornerY,beamZ],5,'#c43d3d','rope joint');
+  circle([face,cornerY,beamZ],5,statusColor(vals.topDemand,343),'top/handrail');
+  circle([face,cornerY,lowerZ],5,statusColor(vals.braceDemand,794),'lower/tower leg');
+  circle([face,cornerY,wireZ],5,statusColor(vals.cableDemand,980),'roof cable joint');
 
   ctx.fillStyle='#26313c';ctx.font='12px -apple-system,Arial';
   ctx.fillText('26 ft tower',14,20);
@@ -185,12 +185,30 @@ function draw(){
 function calc(){
   const W=+w.value,D=+d.value,S=+s.value/100,P0=+p.value;
   const P=W*D,H=P*S,R=Math.hypot(P,H),theta=46.4*Math.PI/180;
-  const brace=P/Math.sin(theta), beam=P/Math.tan(theta), torsion=H*reach, cant=P*reach;
+  const brace=P/Math.sin(theta), beam=P/Math.tan(theta), cant=P*reach;
+
+  // Gallows is on one corner. Tower centerline is (0,0).
+  const ex=Math.abs(tip);       // normal centerline-to-rope offset
+  const ey=Math.abs(cornerY);   // lateral centerline-to-corner offset
+  const MvertX=P*ey;
+  const MvertY=P*ex;
+  const MvertResult=Math.hypot(MvertX,MvertY);
+
+  // Side/swing force is drawn in +Y at beam height.
+  const MsideOverturn=H*beamZ;
+  const Tvertical=H*ex;
+  const MxCombined=MvertX+MsideOverturn;
+  const MyCombined=MvertY;
+  const MoverturnResult=Math.hypot(MxCombined,MyCombined);
+  const localTorsion=H*reach;
+
   const cableAngle=Math.atan2(4,reach);
   const addedCable=Math.max(0,P*0.35/Math.sin(cableAngle));
   const cable=P0+addedCable;
   return {
-    W,D,S,P,H,R,brace,beam,torsion,cant,cable,
+    W,D,S,P,H,R,brace,beam,cant,cable,ex,ey,
+    MvertX,MvertY,MvertResult,MsideOverturn,Tvertical,
+    MxCombined,MyCombined,MoverturnResult,localTorsion,
     topDemand:Math.hypot(P,beam)*0.55,
     braceDemand:brace,
     cableDemand:cable
@@ -207,14 +225,22 @@ function update(){
   const v=calc();
   const rows=[
     ['Vertical design load',v.P,'lb',null],
-    ['Side load',v.H,'lb',null],
+    ['Side / swing load',v.H,'lb',null],
     ['Resultant rope load',v.R,'lb',null],
     ['Lower brace axial force',v.brace,'lb',940],
     ['Lower 3×3×3/16 tower-leg screen',v.brace,'lb',794],
     ['Top 2×2×3/16 handrail demand',v.topDemand,'lb',343],
     ['Upper cable tension',v.cable,'lb',980],
-    ['Out-of-plane torsion',v.torsion,'ft-lb',null],
-    ['Brace-loss cantilever moment',v.cant,'ft-lb',null],
+    ['Local brace-loss cantilever moment',v.cant,'ft-lb',null],
+    ['Corner offset from centerline',v.ey,'ft',null],
+    ['Rope normal offset from centerline',v.ex,'ft',null],
+    ['Vertical-load moment Mx',v.MvertX,'ft-lb',null],
+    ['Vertical-load moment My',v.MvertY,'ft-lb',null],
+    ['Vertical-load resultant moment',v.MvertResult,'ft-lb',null],
+    ['Side-load overturning moment',v.MsideOverturn,'ft-lb',null],
+    ['Side-load tower torsion',v.Tvertical,'ft-lb',null],
+    ['Combined tower overturning moment',v.MoverturnResult,'ft-lb',null],
+    ['Local gallows side torsion',v.localTorsion,'ft-lb',null],
   ];
   document.getElementById('stats').innerHTML=rows.map(([name,val,unit,lim])=>{
     const c=lim?cls(val,lim):'';
