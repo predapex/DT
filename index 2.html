@@ -56,7 +56,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
         <span><i class="dot" style="background:var(--tower)"></i>Angle-iron tower</span>
         <span><i class="dot" style="background:#315d87"></i>Loaded 3×3×3/16 square-tube leg</span>
         <span><i class="dot" style="background:var(--gallows)"></i>Gallows</span>
-        <span><i class="dot" style="background:var(--bad)"></i>High-demand points</span><span><i class="dot" style="background:#8a5a9b"></i>Secondary tower load path</span>
+        <span><i class="dot" style="background:var(--bad)"></i>High-demand points</span><span><i class="dot" style="background:#8a5a9b"></i>Calculated attachment-force direction</span>
       </div>
     </div>
 
@@ -84,7 +84,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Secondary tower load distribution</div>
     <div class="small">
-      Purple arrows trace the secondary load paths after the gallows forces enter the tower at the lower knee-brace connection, boom/handrail connection, and upper cable/roof-frame connection. They show transfer into the existing framing, neighboring legs and foundations. Arrow thickness responds to the load sliders. This is a load-path visualization, not a finite-element calculation of the exact force in each individual brace.
+      Purple arrows now show the force directions the gallows applies to the tower at its three actual attachment points. Lower knee-brace attachment: inward and downward. Upper cable/roof-frame attachment: outward and downward. Beam/handrail attachment: horizontal reaction opposing the net horizontal force from the brace and upper cable. These arrows are calculated from the displayed gallows geometry and current load settings; they are not assumed paths into the other tower legs or foundations.
     </div>
   </div>
 
@@ -191,23 +191,20 @@ function draw(){
   circle([face,cornerY,lowerZ],5,statusColor(vals.braceDemand,794),'lower/tower leg');
   circle([face,cornerY,wireZ],5,statusColor(vals.cableDemand,980),'roof cable joint');
 
-  // Secondary load-path overlay only; tower and gallows geometry are unchanged.
-  const sec='#8a5a9b', secW=Math.max(1.5,Math.min(5,1.5+vals.R/250));
-  const h21=interp(0,21)/2;
-  // Lower brace input into loaded leg and 21-ft horizontal frame.
-  arrow([face,cornerY,lowerZ],[-h21,-h21,21],sec,secW);
-  arrow([-h21,-h21,21],[h21,-h21,21],sec,secW*.72);
-  arrow([-h21,-h21,21],[-h21,h21,21],sec,secW*.72);
-  // Boom/handrail input into platform/handrail framing.
-  arrow([face,cornerY,beamZ],[5,-4.5,30],sec,secW*.8);
-  arrow([face,cornerY,beamZ],[-5,4.5,30],sec,secW*.8);
-  // Upper cable input into roof frame.
-  arrow([face,cornerY,wireZ],[4,-2.5,33],sec,secW*.65);
-  arrow([face,cornerY,wireZ],[-4,4,33],sec,secW*.65);
-  // Continuation into the other legs/foundations.
-  arrow([top/2,-top/2,zTop],[base/2,-base/2,0],sec,secW*.55);
-  arrow([-top/2,top/2,zTop],[-base/2,base/2,0],sec,secW*.55);
-  arrow([top/2,top/2,zTop],[base/2,base/2,0],sec,secW*.42);
+  // Calculated gallows-on-tower reaction vectors at the three real attachment points.
+  // Purple arrows are force directions, not guessed paths through the tower framing.
+  const sec='#8a5a9b';
+  const vecScale=0.010;
+  function reactionArrow(P,fx,fz){
+    const mag=Math.hypot(fx,fz);
+    if(mag<1)return;
+    const maxLen=5.0, raw=mag*vecScale, L=Math.min(maxLen,Math.max(1.0,raw));
+    const ux=fx/mag, uz=fz/mag;
+    arrow(P,[P[0]+ux*L,P[1],P[2]+uz*L],sec,Math.max(2,Math.min(5,1.5+mag/250)));
+  }
+  reactionArrow([face,cornerY,lowerZ], vals.lowerFx, vals.lowerFz);
+  reactionArrow([face,cornerY,wireZ],  vals.upperFx, vals.upperFz);
+  reactionArrow([face,cornerY,beamZ],  vals.beamFx,  0);
 
   ctx.fillStyle='#26313c';ctx.font='12px -apple-system,Arial';
   ctx.fillText('26 ft tower',14,20);
@@ -215,8 +212,31 @@ function draw(){
 
 function calc(){
   const W=+w.value,D=+d.value,S=+s.value/100,P0=+p.value;
-  const P=W*D,H=P*S,R=Math.hypot(P,H),theta=46.4*Math.PI/180;
-  const brace=P/Math.sin(theta), beam=P/Math.tan(theta), cant=P*reach;
+  const P=W*D,H=P*S,R=Math.hypot(P,H);
+  const braceDx=Math.abs(tip-face), braceDz=beamZ-lowerZ;
+  const braceLen=Math.hypot(braceDx,braceDz);
+  const sinBrace=braceDz/braceLen, cosBrace=braceDx/braceLen;
+  const cableDx=Math.abs(tip-face), cableDz=wireZ-beamZ;
+  const cableLen=Math.hypot(cableDx,cableDz);
+  const sinCable=cableDz/cableLen, cosCable=cableDx/cableLen;
+
+  // Upper cable tension is the selected pretension. Its upward component at the boom tip
+  // carries part of the vertical rope load. The knee brace carries the remaining vertical load.
+  const cable=P0;
+  const cableUp=cable*sinCable;
+  const braceVertical=Math.max(0,P-cableUp);
+  const brace=braceVertical/sinBrace;
+  const braceHorizontal=brace*cosBrace;
+
+  // Forces APPLIED BY THE GALLOWS TO THE TOWER:
+  // lower compression brace -> inward (+X) and downward (-Z)
+  // upper tension cable     -> outward (-X) and downward (-Z)
+  // beam/handrail reaction  -> balances their horizontal components.
+  const lowerFx= braceHorizontal, lowerFz=-braceVertical;
+  const upperFx=-cable*cosCable, upperFz=-cableUp;
+  const beamFx=-(lowerFx+upperFx);
+  const beam=Math.abs(beamFx);
+  const cant=P*reach;
 
   // Gallows is on one corner. Tower centerline is (0,0).
   const ex=Math.abs(tip);       // normal centerline-to-rope offset
@@ -233,14 +253,12 @@ function calc(){
   const MoverturnResult=Math.hypot(MxCombined,MyCombined);
   const localTorsion=H*reach;
 
-  const cableAngle=Math.atan2(4,reach);
-  const addedCable=Math.max(0,P*0.35/Math.sin(cableAngle));
-  const cable=P0+addedCable;
   return {
     W,D,S,P,H,R,brace,beam,cant,cable,ex,ey,
+    lowerFx,lowerFz,upperFx,upperFz,beamFx,
     MvertX,MvertY,MvertResult,MsideOverturn,Tvertical,
     MxCombined,MyCombined,MoverturnResult,localTorsion,
-    topDemand:Math.hypot(P,beam)*0.55,
+    topDemand:Math.abs(beamFx),
     braceDemand:brace,
     cableDemand:cable
   };
@@ -262,6 +280,11 @@ function update(){
     ['Loaded 3×3×3/16 square-tube leg demand',v.brace,'lb',null],
     ['Top 2×2×3/16 handrail demand',v.topDemand,'lb',343],
     ['Upper cable tension',v.cable,'lb',980],
+    ['Lower attachment horizontal',Math.abs(v.lowerFx),'lb',null],
+    ['Lower attachment downward',Math.abs(v.lowerFz),'lb',null],
+    ['Upper attachment outward',Math.abs(v.upperFx),'lb',null],
+    ['Upper attachment downward',Math.abs(v.upperFz),'lb',null],
+    ['Beam/handrail horizontal reaction',Math.abs(v.beamFx),'lb',null],
     ['Local brace-loss cantilever moment',v.cant,'ft-lb',null],
     ['Corner offset from centerline',v.ey,'ft',null],
     ['Rope normal offset from centerline',v.ex,'ft',null],
