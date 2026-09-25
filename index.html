@@ -53,7 +53,8 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
       </div>
       <div class="canvasbox" id="box"><canvas id="cv"></canvas></div>
       <div class="legend">
-        <span><i class="dot" style="background:var(--tower)"></i>Tower</span>
+        <span><i class="dot" style="background:var(--tower)"></i>Angle-iron tower</span>
+        <span><i class="dot" style="background:#315d87"></i>Loaded 3×3×3/16 square-tube leg</span>
         <span><i class="dot" style="background:var(--gallows)"></i>Gallows</span>
         <span><i class="dot" style="background:var(--bad)"></i>High-demand points</span>
       </div>
@@ -75,7 +76,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
       <div class="card" style="margin-top:14px">
         <div class="sectiontitle">Current calculated demand</div>
         <div id="stats"></div>
-        <div class="note">Orange = 80–100% of screening value. Red = above screening value. <strong>The red rope joint at the end of the gallows is different: it is always shown red to identify the primary load-application / high-demand point. Its red color does NOT mean that connection has exceeded an estimated capacity.</strong> Corner-load calculations include the 5 ft plan offset from the tower centerline and the rope point's full centerline eccentricity. These are preliminary engineering screens, not certified capacities.</div>
+        <div class="note">Orange = 80–100% of screening value. Red = above screening value. <strong>The red rope joint at the end of the gallows is different: it is always shown red to identify the primary load-application / high-demand point. Its red color does NOT mean that connection has exceeded an estimated capacity.</strong> Corner-load calculations include the 5 ft plan offset from the tower centerline and the rope point's full centerline eccentricity. The loaded leg is now modeled as 3×3×3/16 square tube; the other three legs remain 3×3×3/16 angle. Because leg capacity depends on unsupported length, effective-length/end conditions, steel grade, welds and connection details, the old 794 lb angle-leg screening limit has been removed rather than falsely reused for the square tube. These are preliminary engineering screens, not certified capacities.</div>
       </div>
     </div>
   </div>
@@ -83,7 +84,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Attachment / member assumptions</div>
     <div class="small">
-      CORNER MOUNT: gallows is attached at one tower corner/leg, not at the face centerline · Bottom brace → 3×3×3/16 in angle tower leg · Top beam → 2×2×3/16 in angle handrail · Upper cable → 2×2×3/16 in roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Cable → 1/4 in 7×19 stainless, 500 lb default pretension · Rope reach → 99.5 in · Lower brace → ~12 ft · Brace angle → 46.4°
+      CORNER MOUNT: gallows is attached at one tower corner/leg, not at the face centerline · Loaded gallows leg ONLY → 3×3×3/16 in square tube; other three tower legs remain 3×3×3/16 angle · Bottom brace attaches to the loaded square-tube leg · Top beam → 2×2×3/16 in angle handrail · Upper cable → 2×2×3/16 in roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Cable → 1/4 in 7×19 stainless, 500 lb default pretension · Rope reach → 99.5 in · Lower brace → ~12 ft · Brace angle → 46.4°
     </div>
     <div class="note">Screening values depend heavily on actual unsupported span, connection geometry, bolt grade/layout, welds, eccentricity, corrosion and anchorage. A structural engineer should replace these estimates with measured capacities before anyone climbs on it.</div>
   </div>
@@ -141,7 +142,12 @@ function draw(){
   poly([[-12,-12,0],[12,-12,0],[12,12,0],[-12,12,0]],'#c9d3dc','#b5c0c9',1);
 
   const corners=[[-1,-1],[-1,1],[1,-1],[1,1]];
-  for(const [sx,sy] of corners) line([sx*base/2,sy*base/2,0],[sx*top/2,sy*top/2,zTop],'#4f6f8f',4);
+  for(const [sx,sy] of corners){
+    // The gallows-loaded corner is (-x,-y): 3×3×3/16 square tube.
+    // The other three legs remain 3×3×3/16 angle.
+    const loaded=(sx===-1 && sy===-1);
+    line([sx*base/2,sy*base/2,0],[sx*top/2,sy*top/2,zTop],loaded?'#315d87':'#4f6f8f',loaded?7:4);
+  }
   for(const z of [7,14,21]){
     const ww=interp(0,z), h=ww/2;
     const pts=[[-h,-h,z],[h,-h,z],[h,h,z],[-h,h,z]];
@@ -228,7 +234,7 @@ function update(){
     ['Side / swing load',v.H,'lb',null],
     ['Resultant rope load',v.R,'lb',null],
     ['Lower brace axial force',v.brace,'lb',940],
-    ['Lower 3×3×3/16 tower-leg screen',v.brace,'lb',794],
+    ['Loaded 3×3×3/16 square-tube leg demand',v.brace,'lb',null],
     ['Top 2×2×3/16 handrail demand',v.topDemand,'lb',343],
     ['Upper cable tension',v.cable,'lb',980],
     ['Local brace-loss cantilever moment',v.cant,'ft-lb',null],
