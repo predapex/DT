@@ -230,7 +230,7 @@ document.getElementById('plus').onclick=()=>{zoom=Math.min(28,zoom+1.5);draw()};
 document.getElementById('minus').onclick=()=>{zoom=Math.max(8,zoom-1.5);draw()};
 
 cv.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
-cv.addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-lastX)*.008;pitch=Math.max(-.6,Math.min(1.1,pitch+(e.clientY-lastY)*.007));lastX=e.clientX;lastY=e.clientY;draw()});
+cv.addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-lastX)*.008;pitch+=(e.clientY-lastY)*.007;lastX=e.clientX;lastY=e.clientY;draw()});
 cv.addEventListener('pointerup',()=>drag=false);
 cv.addEventListener('pointercancel',()=>drag=false);
 
