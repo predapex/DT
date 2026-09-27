@@ -91,7 +91,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Rear footing uplift screen</div>
     <div class="small">
-      Tower top is level. Front tower legs are 3 ft longer than the rear legs over the 15 ft front-to-rear footing spacing. Red/orange arrows show the uplift-producing reaction at the rear footing line from the modeled gallows loads. The displayed value is <strong>not net footing uplift</strong>: tower self-weight, footing/concrete weight, soil/rock restraint, guy-cable effects and anchor/rebar resistance are not subtracted because those values are not in the model. The gallows-side rear-foot range runs from an equal 50/50 rear-line split to a conservative 100% concentration envelope; exact distribution requires the tower-frame stiffness.
+      Tower top is level. The gallows projects from the FRONT of the tower. Front tower legs are 3 ft longer than the rear legs over the 15 ft front-to-rear footing spacing. Red/orange arrows show the uplift-producing reaction at the actual REAR footing line, opposite the gallows. The displayed value is <strong>not net footing uplift</strong>: tower self-weight, footing/concrete weight, soil/rock restraint, guy-cable effects and anchor/rebar resistance are not subtracted because those values are not in the model. The gallows-side rear-foot range runs from an equal 50/50 rear-line split to a conservative 100% concentration envelope; exact distribution requires the tower-frame stiffness.
     </div>
   </div>
 
@@ -210,9 +210,13 @@ function draw(){
   arrow([top/2,top/2,zTop],[base/2,base/2,0],sec,secW*.42);
 
   const upliftScale=Math.min(5,0.8+vals.rearLineUplift/250);
-  arrow([-base/2,-base/2,0],[-base/2,-base/2,upliftScale],'#c43d3d',4);
-  arrow([ base/2,-base/2,0],[ base/2,-base/2,Math.max(.5,upliftScale*.5)],'#c58a00',2.5);
-  circle([-base/2,-base/2,0],6,'#c43d3d','rear gallows-side footing: uplift screen');
+  // Gallows projects from the FRONT (-X). Rear footing line is therefore +X.
+  // Red = rear footing on the same side of the tower as the gallows attachment.
+  // Orange = opposite rear footing. The foot directly below the gallows is FRONT, not rear.
+  arrow([ base/2,-base/2,0],[ base/2,-base/2,upliftScale],'#c43d3d',4);
+  arrow([ base/2, base/2,0],[ base/2, base/2,Math.max(.5,upliftScale*.5)],'#c58a00',2.5);
+  circle([ base/2,-base/2,0],6,'#c43d3d','rear gallows-side footing: uplift screen');
+  circle([-base/2,-base/2,0],4,'#315d87','front gallows-side footing');
 
   ctx.fillStyle='#26313c';ctx.font='12px -apple-system,Arial';
   ctx.fillText('26 ft tower',14,20);
@@ -236,7 +240,10 @@ function calc(){
   const MoverturnResult=Math.hypot(MxCombined,MyCombined);
   const localTorsion=H*reach;
 
-  const rearLineUplift=Math.max(0,MxCombined/footSpanFB);
+  // Front/rear is the X axis because the gallows projects in -X.
+  // The front-to-rear footing-line reaction therefore comes from the Y-axis
+  // overturning moment, not Mx.
+  const rearLineUplift=Math.max(0,MyCombined/footSpanFB);
   const rearGallEqual=rearLineUplift*0.50;
   const rearGallEnvelope=rearLineUplift;
 
