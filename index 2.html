@@ -210,9 +210,9 @@ function draw(){
   arrow([top/2,top/2,zTop],[base/2,base/2,0],sec,secW*.42);
 
   const upliftScale=Math.min(5,0.8+vals.rearLineUplift/250);
-  arrow([-base/2,base/2,0],[-base/2,base/2,upliftScale],'#c43d3d',4);
-  arrow([ base/2,base/2,0],[ base/2,base/2,Math.max(.5,upliftScale*.5)],'#c58a00',2.5);
-  circle([-base/2,base/2,0],6,'#c43d3d','rear gallows-side footing: uplift screen');
+  arrow([-base/2,-base/2,0],[-base/2,-base/2,upliftScale],'#c43d3d',4);
+  arrow([ base/2,-base/2,0],[ base/2,-base/2,Math.max(.5,upliftScale*.5)],'#c58a00',2.5);
+  circle([-base/2,-base/2,0],6,'#c43d3d','rear gallows-side footing: uplift screen');
 
   ctx.fillStyle='#26313c';ctx.font='12px -apple-system,Arial';
   ctx.fillText('26 ft tower',14,20);
