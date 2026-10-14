@@ -111,7 +111,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
 (function(){
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d'), box=document.getElementById('box');
 const w=document.getElementById('w'), d=document.getElementById('d'), s=document.getElementById('s'), age=document.getElementById('age');
-let yaw=-0.55,pitch=0.32,zoom=15.5,drag=false,lastX=0,lastY=0,lastDist=0;
+let yaw=-0.55,pitch=0.32,zoom=9.5,drag=false,lastX=0,lastY=0,lastDist=0;
 
 function resize(){
   const r=box.getBoundingClientRect(), ratio=Math.min(window.devicePixelRatio||1,2);
@@ -128,7 +128,7 @@ function rot(P){
   return [x1,y2,z2];
 }
 function proj(P){
-  let [x,y,z]=rot(P), cx=box.clientWidth/2, cy=box.clientHeight*0.73;
+  let [x,y,z]=rot(P), cx=box.clientWidth/2, cy=box.clientHeight*0.53;
   let scale=zoom*(1+z/130);
   return [cx+x*scale, cy-y*scale];
 }
@@ -142,8 +142,8 @@ function poly(points,fill,stroke,width=1){
   if(fill){ctx.fillStyle=fill;ctx.fill()} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()}
 }
 function circle(P,r,color,label){
-  const q=proj(P);ctx.beginPath();ctx.arc(q[0],q[1],r,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-  if(label){ctx.font='11px -apple-system,Arial';ctx.fillStyle='#17202a';ctx.fillText(label,q[0]+7,q[1]-7)}
+  const q=proj(P);ctx.beginPath();ctx.arc(q[0],q[1],Math.max(r,6),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  if(label){ctx.font='11px -apple-system,Arial';const tw=ctx.measureText(label).width;ctx.fillStyle='rgba(255,255,255,.88)';ctx.fillRect(q[0]+8,q[1]-18,tw+5,14);ctx.fillStyle='#17202a';ctx.fillText(label,q[0]+10,q[1]-7)}
 }
 function arrow(a,b,color,width=3){
   const A=proj(a),B=proj(b);ctx.beginPath();ctx.moveTo(...A);ctx.lineTo(...B);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
