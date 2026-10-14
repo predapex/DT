@@ -2,7 +2,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Dan Tower + Gallows Model - Secondary Load Paths + Footing Uplift</title>
+<title>Dan Tower + Gallows Model - Conservative Load Cases + Deterioration</title>
 <style>
 :root{
   --bg:#eef2f6; --panel:#ffffff; --text:#18202a; --muted:#5f6b78; --line:#c8d0d9;
@@ -26,7 +26,7 @@ input[type=range]{width:100%;margin:6px 0 12px}
 .value{font-weight:700}
 .red{color:var(--bad)}
 .orange{color:var(--warn)}
-.green{color:var(--ok)}
+.unknown{color:#8a5a9b}
 .badge{font-size:11px;padding:2px 7px;border-radius:999px;background:#eef2f5;color:#4a5560}
 button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--text)}
 .sectiontitle{font-weight:700;margin-bottom:8px}
@@ -41,7 +41,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
 </head>
 <body>
 <div class="wrap">
-  <h1>Dan Tower + Gallows Load Model — Secondary Load Paths + Footing Uplift</h1>
+  <h1>Dan Tower + Gallows Load Model — Conservative Load Cases + Deterioration</h1>
   <div class="grid">
     <div class="card">
       <div class="row">
@@ -56,7 +56,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
         <span><i class="dot" style="background:var(--tower)"></i>Angle-iron tower</span>
         <span><i class="dot" style="background:#315d87"></i>Loaded 3×3×3/16 square-tube leg</span>
         <span><i class="dot" style="background:var(--gallows)"></i>Gallows</span>
-        <span><i class="dot" style="background:var(--bad)"></i>High-demand points</span><span><i class="dot" style="background:#8a5a9b"></i>Secondary tower load path</span>
+        <span><i class="dot" style="background:var(--bad)"></i>Legacy screen exceeded</span><span><i class="dot" style="background:#8a5a9b"></i>Capacity unverified</span><span><i class="dot" style="background:#8a5a9b"></i>Secondary tower load path</span>
       </div>
     </div>
 
@@ -64,17 +64,23 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
       <div class="card">
         <div class="sectiontitle">Load controls</div>
         <label>Climber weight: <span id="wOut">160</span> lb</label>
+        <div class="note">Two ropes × 50 lb = <strong>100 lb permanently added</strong>. Dynamic multiplier applies to climber + both ropes.</div>
         <input id="w" type="range" min="80" max="300" value="160" step="5">
         <label>Dynamic multiplier: <span id="dOut">2.0</span>×</label>
         <input id="d" type="range" min="1" max="4" value="2" step=".1">
         <label>Side / swing load: <span id="sOut">15</span>%</label>
         <input id="s" type="range" min="0" max="50" value="15" step="5">
+        <label>Additional deterioration beyond ⅓ baseline: <span id="ageOut">0</span>%</label>
+        <input id="age" type="range" min="0" max="90" value="0" step="5">
+        <div class="note">Every member, joint, rope attachment and footing retains at most ⅔ of its assumed original capacity. This control reduces the remaining capacity further.</div>
       </div>
 
       <div class="card" style="margin-top:14px">
         <div class="sectiontitle">Current calculated demand</div>
         <div id="stats"></div>
-        <div class="note">Orange = 80–100% of screening value. Red = above screening value. <strong>The red rope joint at the end of the gallows is different: it is always shown red to identify the primary load-application / high-demand point. Its red color does NOT mean that connection has exceeded an estimated capacity.</strong> Corner-load calculations include the 5 ft plan offset from the tower centerline and the rope point's full centerline eccentricity. The loaded leg is modeled as 3×3×3/16 square tube; the other three legs remain 3×3×3/16 angle. The upper support is modeled as rigid 2×2×3/16 angle iron. Because leg capacity depends on unsupported length, effective-length/end conditions, steel grade, welds and connection details, the old 794 lb angle-leg screening limit has been removed rather than falsely reused for the square tube. No capacity screen is assigned to the upper angle because compression buckling/tension capacity depends on its actual unsupported length, orientation, steel grade and end connections. These are preliminary engineering screens, not certified capacities.</div>
+        <div class="sectiontitle" style="margin-top:14px">Member / connection / footing checks</div>
+        <div id="pointStats"></div>
+        <div class="note"><strong>This is a conservative scenario screen, not a failure prediction or permission to climb.</strong> Each diagonal is checked separately as the sole vertical support; neither gets credit for the other. Side load is added to member demand, and overturning is enveloped over swing directions. These maxima are separate cases, not simultaneous reactions. Handrail is also checked for complete diagonal-support loss. Red means an unverified legacy screen is exceeded; purple means no capacity is established; grey means below an unverified screen, not safe. No green safety rating is used. The ⅓ deterioration loss is your assumed allowance, not a measured condition assessment. Unknown capacities remain unknown after reduction. See the point checks below.</div>
       </div>
     </div>
   </div>
@@ -82,21 +88,21 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Secondary tower load distribution</div>
     <div class="small">
-      Purple arrows trace the secondary load paths after the gallows forces enter the tower at the lower knee-brace connection, boom/handrail connection, and upper angle/roof-frame connection. They show transfer into the existing framing, neighboring legs and foundations. Arrow thickness responds to the load sliders. This is a load-path visualization, not a finite-element calculation of the exact force in each individual brace.
+      Purple arrows trace the secondary load paths after the gallows forces enter the tower at the lower knee-brace connection, boom/handrail connection, and upper angle/roof-frame connection. They show transfer into the existing framing, neighboring legs and foundations. Arrow thickness responds to the total load including both ropes. No beneficial load sharing is credited in the member checks. This is a load-path visualization, not a finite-element calculation of the exact force in each individual brace.
     </div>
   </div>
 
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Rear footing uplift screen</div>
     <div class="small">
-      Tower top is level. The gallows projects from the FRONT of the tower. Front tower legs are 3 ft longer than the rear legs over the 15 ft front-to-rear footing spacing. Red/orange arrows show the uplift-producing reaction at the actual REAR footing line, opposite the gallows. The displayed value is <strong>not net footing uplift</strong>: tower self-weight, footing/concrete weight, soil/rock restraint, guy-cable effects and anchor/rebar resistance are not subtracted because those values are not in the model. The gallows-side rear-foot range runs from an equal 50/50 rear-line split to a conservative 100% concentration envelope; exact distribution requires the tower-frame stiffness.
+      Tower top is level. The gallows projects from the FRONT of the tower. Front tower legs are 3 ft longer than the rear legs over the 15 ft front-to-rear footing spacing. Red/orange arrows show the uplift-producing reaction at the actual REAR footing line, opposite the gallows. The displayed value is <strong>not net footing uplift</strong>: tower self-weight, footing/concrete weight, soil/rock restraint, guy-cable effects and anchor/rebar resistance are not subtracted because those values are not in the model. Swing direction is enveloped separately for each axis. Each rear footing is checked for 100% of the rear-line uplift component; a single-foot scenario also adds the transverse footing-line uplift component. No equal-split benefit is credited. These are separate load cases, not simultaneous footing reactions, and do not bound every possible frame-stiffness effect.
     </div>
   </div>
 
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Attachment / member assumptions</div>
     <div class="small">
-      CORNER MOUNT: gallows is attached at one tower corner/leg, not at the face centerline · Loaded gallows leg ONLY → 3×3×3/16 in square tube; other three tower legs remain 3×3×3/16 angle · Bottom brace attaches to the loaded square-tube leg · Top beam → 2×2×3/16 in angle handrail · Upper support → 2×2×3/16 in angle iron attached to roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Rope reach → 99.5 in · Lower brace → ~12 ft · Brace angle → 46.4°
+      CORNER MOUNT: gallows is attached at one tower corner/leg, not at the face centerline · Loaded gallows leg ONLY → 3×3×3/16 in square tube; other three tower legs remain 3×3×3/16 angle · Bottom brace attaches to the loaded square-tube leg · Top beam → 2×2×3/16 in angle handrail · Upper support → 2×2×3/16 in angle iron attached to roof frame · Gallows → 2×2×1/4 in angle · Bolts → 1/2 in high-tensile · Rope reach → 99.5 in · Lower brace → ~12 ft · Lower brace angle → calculated from the displayed geometry
     </div>
     <div class="note">Screening values depend heavily on actual unsupported span, connection geometry, bolt grade/layout, welds, eccentricity, corrosion and anchorage. A structural engineer should replace these estimates with measured capacities before anyone climbs on it.</div>
   </div>
@@ -105,7 +111,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
 <script>
 (function(){
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d'), box=document.getElementById('box');
-const w=document.getElementById('w'), d=document.getElementById('d'), s=document.getElementById('s');
+const w=document.getElementById('w'), d=document.getElementById('d'), s=document.getElementById('s'), age=document.getElementById('age');
 let yaw=-0.55,pitch=0.32,zoom=15.5,drag=false,lastX=0,lastY=0,lastDist=0;
 
 function resize(){
@@ -147,6 +153,9 @@ function arrow(a,b,color,width=3){
 }
 
 const zTop=26, base=15, top=10, reach=99.5/12, beamZ=30, face=-5, cornerY=-5, tip=face-reach, lowerZ=beamZ-104.5/12, upperZ=34, footSpanFB=15, frontLegExtra=3;
+const ropeCount=2, ropeWeightEach=50, baselineLoss=1/3;
+// Legacy screens have no established engineering provenance; never label them safe.
+const legacyScreens={lowerBrace:940,handrail:343};
 function interp(s,z){return base+(top-base)*(z/zTop)}
 function draw(){
   ctx.clearRect(0,0,box.clientWidth,box.clientHeight);
@@ -179,20 +188,25 @@ function draw(){
   line([face+4,cornerY,beamZ],[tip,cornerY,beamZ],'#b78a4f',5);
   line([face,cornerY,lowerZ],[tip,cornerY,beamZ],'#b78a4f',5);
   line([face,cornerY,upperZ],[tip,cornerY,beamZ],'#b78a4f',4);
-  line([tip,cornerY,beamZ],[tip,cornerY,3],'#7d5c35',3);
+  for(const offset of [-.3,.3]){
+    line([tip,cornerY+offset,beamZ],[tip,cornerY+offset,3],'#7d5c35',3);
+    circle([tip,cornerY+offset,3],3,'#7d5c35');
+  }
 
   line([5.3,5,2],[5.3,-4,25],'#4f6f8f',2); line([7.4,5,2],[7.4,-4,25],'#4f6f8f',2);
   for(let i=0;i<13;i++){let t=i/12;let z=3+22*t;let y=4.5-8*t;line([5.3,y,z],[7.4,y,z],'#4f6f8f',1.5)}
 
   const vals=calc();
+  circle([face-reach/2,cornerY,(lowerZ+beamZ)/2],5,pointColor(vals.points.lowerBrace),'lower brace');
+  circle([face-reach/2,cornerY,(upperZ+beamZ)/2],5,pointColor(vals.points.upperAngle),'upper angle: unverified');
   const downLen=Math.min(5,1.2+vals.P/200), sideLen=Math.min(4,0.7+vals.H/120);
   arrow([tip,cornerY,beamZ],[tip,cornerY,beamZ-downLen],'#c43d3d',3);
   arrow([tip,cornerY,beamZ],[tip,cornerY+sideLen,beamZ],'#c58a00',3);
 
-  circle([tip,cornerY,beamZ],5,'#c43d3d','rope joint');
-  circle([face,cornerY,beamZ],5,statusColor(vals.topDemand,343),'top/handrail');
-  circle([face,cornerY,lowerZ],5,statusColor(vals.braceDemand,794),'lower/tower leg');
-  circle([face,cornerY,upperZ],5,'#b78a4f','upper angle/roof joint');
+  circle([tip,cornerY,beamZ],5,pointColor(vals.points.ropeJoint),'two ropes: 50 lb each');
+  circle([face,cornerY,beamZ],5,pointColor(vals.points.handrail),'handrail: legacy screen');
+  circle([face,cornerY,lowerZ],5,pointColor(vals.points.lowerJoint),'lower joint: unverified');
+  circle([face,cornerY,upperZ],5,pointColor(vals.points.upperJoint),'upper joint: unverified');
 
   const sec='#8a5a9b', secW=Math.max(1.5,Math.min(5,1.5+vals.R/250));
   const h21=interp(0,21)/2;
@@ -212,88 +226,112 @@ function draw(){
   // Red = rear footing on the same side of the tower as the gallows attachment.
   // Orange = opposite rear footing. The foot directly below the gallows is FRONT, not rear.
   arrow([ base/2,-base/2,0],[ base/2,-base/2,upliftScale],'#c43d3d',4);
-  arrow([ base/2, base/2,0],[ base/2, base/2,Math.max(.5,upliftScale*.5)],'#c58a00',2.5);
-  circle([ base/2,-base/2,0],6,'#c43d3d','rear gallows-side footing: uplift screen');
-  circle([-base/2,-base/2,0],4,'#315d87','front gallows-side footing');
+  arrow([ base/2, base/2,0],[ base/2, base/2,upliftScale],'#c58a00',2.5);
+  circle([ base/2,-base/2,0],6,pointColor(vals.points.rearFoot),'rear footing: unverified');
+  circle([-base/2,-base/2,0],4,pointColor(vals.points.frontFoot),'front footing: unverified');
 
   ctx.fillStyle='#26313c';ctx.font='12px -apple-system,Arial';
   ctx.fillText('26 ft tower',14,20);
 }
 
 function calc(){
-  const W=+w.value,D=+d.value,S=+s.value/100;
-  const P=W*D,H=P*S,R=Math.hypot(P,H),theta=46.4*Math.PI/180;
-  const brace=P/Math.sin(theta), beam=P/Math.tan(theta), cant=P*reach;
-
-  const ex=Math.abs(tip);
-  const ey=Math.abs(cornerY);
-  const MvertX=P*ey;
-  const MvertY=P*ex;
-  const MvertResult=Math.hypot(MvertX,MvertY);
-
-  const MsideOverturn=H*beamZ;
-  const Tvertical=H*ex;
-  const MxCombined=MvertX+MsideOverturn;
-  const MyCombined=MvertY;
-  const MoverturnResult=Math.hypot(MxCombined,MyCombined);
-  const localTorsion=H*reach;
-
-  // Front/rear is the X axis because the gallows projects in -X.
-  // The front-to-rear footing-line reaction therefore comes from the Y-axis
-  // overturning moment, not Mx.
-  const rearLineUplift=Math.max(0,MyCombined/footSpanFB);
-  const rearGallEqual=rearLineUplift*0.50;
-  const rearGallEnvelope=rearLineUplift;
-
+  const W=+w.value,D=+d.value,S=+s.value/100,additionalLoss=+age.value/100;
+  const ropeWeight=ropeCount*ropeWeightEach,totalWeight=W+ropeWeight;
+  const retention=(1-baselineLoss)*(1-additionalLoss);
+  const P=totalWeight*D,H=P*S,R=Math.hypot(P,H);
+  const theta=Math.atan2(beamZ-lowerZ,reach);
   const upperSupportAngle=Math.atan2(upperZ-beamZ,reach);
-  const upperAngle=Math.max(0,P*0.35/Math.sin(upperSupportAngle));
-  return {
-    W,D,S,P,H,R,brace,beam,cant,upperAngle,ex,ey,
-    MvertX,MvertY,MvertResult,MsideOverturn,Tvertical,
-    MxCombined,MyCombined,MoverturnResult,localTorsion,rearLineUplift,rearGallEqual,rearGallEnvelope,
-    topDemand:Math.hypot(P,beam)*0.55,
-    braceDemand:brace,
-    upperAngleDemand:upperAngle
-  };
+  // Separate sole-support cases; no arbitrary 35% or 55% load sharing.
+  const brace=P/Math.sin(theta),upperAngle=P/Math.sin(upperSupportAngle);
+  const beam=Math.max(P/Math.tan(theta),P/Math.tan(upperSupportAngle));
+  // Triangle-inequality force allowance: all side demand at each checked point.
+  const braceDemand=brace+H,upperAngleDemand=upperAngle+H,topDemand=Math.hypot(P,beam)+H;
+  const cant=P*reach,localTorsion=H*reach;
+  const ex=Math.abs(tip),ey=Math.abs(cornerY);
+  const MvertX=P*ey,MvertY=P*ex,MvertResult=Math.hypot(MvertX,MvertY);
+  const MsideOverturn=H*beamZ;
+  // Each axis maximum is a separate worst-direction swing case.
+  const MxCombined=MvertX+MsideOverturn,MyCombined=MvertY+MsideOverturn;
+  // Resultant maximum is NOT the hypot of separately maximized components.
+  const MoverturnResult=MvertResult+MsideOverturn;
+  const Tvertical=H*Math.hypot(ex,ey);
+  const rearLineUplift=MyCombined/footSpanFB,sideLineUplift=MxCombined/base;
+  const singleFootUplift=rearLineUplift+sideLineUplift;
+  const frontFootCompression=P+singleFootUplift;
+  const points={};
+  function point(key,name,demand,unit='lb',originalScreen=null){
+    points[key]={name,demand,unit,retention,
+      equivalentNewDemand:demand/retention,
+      originalScreen,
+      reducedScreen:originalScreen===null?null:originalScreen*retention};
+  }
+  point('ropeJoint','Ropes / tip attachment (combined)',R);
+  point('lowerBrace','Lower brace — sole-support case + side allowance',braceDemand,'lb',legacyScreens.lowerBrace);
+  point('lowerJoint','Lower brace bolts / welds',braceDemand);
+  point('loadedLeg','Loaded square-tube leg — force envelope',Math.max(braceDemand,topDemand,frontFootCompression));
+  point('upperAngle','Upper angle — sole-support case + side allowance',upperAngleDemand);
+  point('upperJoint','Upper angle bolts / welds / roof joint',upperAngleDemand);
+  point('roofFrame','Roof framing — upper-support case',upperAngleDemand);
+  point('handrail','Handrail — force envelope',topDemand,'lb',legacyScreens.handrail);
+  point('boomJoint','Boom / handrail bolts / welds',topDemand);
+  point('boom','Gallows boom — both diagonals unavailable',cant,'ft-lb');
+  point('boomSide','Gallows boom — side bending',localTorsion,'ft-lb');
+  point('tower','Tower / neighboring legs / bracing — overturning',MoverturnResult,'ft-lb');
+  point('towerTorsion','Tower connections / bracing — torsion',Tvertical,'ft-lb');
+  point('rearFoot','Each rear footing / anchors — single-foot uplift scenario',singleFootUplift);
+  point('frontFoot','Front footing / base joint — compression scenario',frontFootCompression);
+  return {W,D,S,ropeWeight,totalWeight,retention,P,H,R,brace,beam,upperAngle,
+    braceDemand,upperAngleDemand,topDemand,cant,ex,ey,MvertX,MvertY,MvertResult,
+    MsideOverturn,Tvertical,MxCombined,MyCombined,MoverturnResult,localTorsion,
+    rearLineUplift,sideLineUplift,singleFootUplift,frontFootCompression,points};
 }
-function statusColor(v,limit){return v>limit?'#c43d3d':v>=.8*limit?'#c58a00':'#2f855a'}
-function cls(v,limit){return v>limit?'red':v>=.8*limit?'orange':'green'}
+function pointClass(p){
+  if(p.reducedScreen===null)return 'unknown';
+  return p.demand>p.reducedScreen?'red':p.demand>=.8*p.reducedScreen?'orange':'';
+}
+function pointColor(p){return ({red:'#c43d3d',orange:'#c58a00',unknown:'#8a5a9b'})[pointClass(p)]||'#5f6b78';}
 function fmt(n){return Math.round(n).toLocaleString()}
 function update(){
   document.getElementById('wOut').textContent=w.value;
   document.getElementById('dOut').textContent=(+d.value).toFixed(1);
   document.getElementById('sOut').textContent=s.value;
+  document.getElementById('ageOut').textContent=age.value;
   const v=calc();
   const rows=[
-    ['Vertical design load',v.P,'lb',null],
-    ['Side / swing load',v.H,'lb',null],
-    ['Resultant rope load',v.R,'lb',null],
-    ['Lower brace axial force',v.brace,'lb',940],
-    ['Loaded 3×3×3/16 square-tube leg demand',v.brace,'lb',null],
-    ['Top 2×2×3/16 handrail demand',v.topDemand,'lb',343],
-    ['Upper 2×2×3/16 angle axial demand',v.upperAngleDemand,'lb',null],
-    ['Local brace-loss cantilever moment',v.cant,'ft-lb',null],
-    ['Corner offset from centerline',v.ey,'ft',null],
-    ['Rope normal offset from centerline',v.ex,'ft',null],
-    ['Vertical-load moment Mx',v.MvertX,'ft-lb',null],
-    ['Vertical-load moment My',v.MvertY,'ft-lb',null],
-    ['Vertical-load resultant moment',v.MvertResult,'ft-lb',null],
-    ['Side-load overturning moment',v.MsideOverturn,'ft-lb',null],
-    ['Side-load tower torsion',v.Tvertical,'ft-lb',null],
-    ['Combined tower overturning moment',v.MoverturnResult,'ft-lb',null],
-    ['Local gallows side torsion',v.localTorsion,'ft-lb',null],
-    ['Rear footing-line uplift component',v.rearLineUplift,'lb',null],
-    ['Rear gallows-side foot — equal-split estimate',v.rearGallEqual,'lb',null],
-    ['Rear gallows-side foot — concentration envelope',v.rearGallEnvelope,'lb',null],
+    ['Climber only',v.W,'lb'],
+    ['Two ropes (built in)',v.ropeWeight,'lb'],
+    ['Combined static weight',v.totalWeight,'lb'],
+    ['Remaining assumed capacity at every point',v.retention*100,'%'],
+    ['Vertical dynamic demand',v.P,'lb'],
+    ['Side / swing demand',v.H,'lb'],
+    ['Resultant tip demand',v.R,'lb'],
+    ['Lower brace — sole vertical support',v.brace,'lb'],
+    ['Upper angle — sole vertical support',v.upperAngle,'lb'],
+    ['Boom axial-force envelope',v.beam,'lb'],
+    ['Both diagonal supports lost — root bending',v.cant,'ft-lb'],
+    ['Side bending at gallows root',v.localTorsion,'ft-lb'],
+    ['Corner offset from centerline',v.ey,'ft'],
+    ['Tip offset from centerline',v.ex,'ft'],
+    ['Vertical-load moment Mx',v.MvertX,'ft-lb'],
+    ['Vertical-load moment My',v.MvertY,'ft-lb'],
+    ['Vertical-load resultant moment',v.MvertResult,'ft-lb'],
+    ['Side-load overturning envelope',v.MsideOverturn,'ft-lb'],
+    ['Tower torsion — swing-direction envelope',v.Tvertical,'ft-lb'],
+    ['Combined overturning — resultant envelope',v.MoverturnResult,'ft-lb'],
+    ['Rear footing-line uplift component',v.rearLineUplift,'lb'],
+    ['Transverse footing-line uplift component',v.sideLineUplift,'lb'],
+    ['Single-foot uplift scenario',v.singleFootUplift,'lb'],
   ];
-  document.getElementById('stats').innerHTML=rows.map(([name,val,unit,lim])=>{
-    const c=lim?cls(val,lim):'';
-    const tag=lim?` <span class="badge">screen ${fmt(lim)} ${unit}</span>`:'';
-    return `<div class="stat"><div>${name}${tag}</div><div class="value ${c}">${fmt(val)} ${unit}</div></div>`;
+  document.getElementById('stats').innerHTML=rows.map(([name,val,unit])=>
+    `<div class="stat"><div>${name}</div><div class="value">${unit==='%'?val.toFixed(1):fmt(val)} ${unit}</div></div>`).join('');
+  document.getElementById('pointStats').innerHTML=Object.values(v.points).map(p=>{
+    const tag=p.reducedScreen===null?'CAPACITY UNVERIFIED':
+      `${p.demand>p.reducedScreen?'LEGACY SCREEN EXCEEDED':'Unverified legacy screen'}: ${fmt(p.reducedScreen)} ${p.unit} (original ${fmt(p.originalScreen)})`;
+    return `<div class="stat"><div>${p.name}<div class="small">${tag} · capacity retained ${(p.retention*100).toFixed(1)}%<br>Equivalent demand against original capacity: ${fmt(p.equivalentNewDemand)} ${p.unit}</div></div><div class="value ${pointClass(p)}">${fmt(p.demand)} ${p.unit}</div></div>`;
   }).join('');
   draw();
 }
-[w,d,s].forEach(el=>el.addEventListener('input',update));
+[w,d,s,age].forEach(el=>el.addEventListener('input',update));
 
 document.getElementById('reset').onclick=()=>{yaw=-.55;pitch=.32;zoom=15.5;draw()};
 document.getElementById('plus').onclick=()=>{zoom=Math.min(28,zoom+1.5);draw()};
