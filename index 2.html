@@ -80,7 +80,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
         <div id="stats"></div>
         <div class="sectiontitle" style="margin-top:14px">Member / connection / footing checks</div>
         <div id="pointStats"></div>
-        <div class="note"><strong>This is a conservative scenario screen, not a failure prediction or permission to climb.</strong> Each diagonal is checked separately as the sole vertical support; neither gets credit for the other. Side load is added to member demand, and overturning is enveloped over swing directions. These maxima are separate cases, not simultaneous reactions. Handrail is also checked for complete diagonal-support loss. Red means an unverified legacy screen is exceeded; purple means no capacity is established; grey means below an unverified screen, not safe. No green safety rating is used. The ⅓ deterioration loss is your assumed allowance, not a measured condition assessment. Unknown capacities remain unknown after reduction. See the point checks below.</div>
+        <div class="note"><strong>This is a conservative scenario screen, not a failure prediction or permission to climb.</strong> Brace and handrail screen values are vertical-only idealizations; swing-load member forces and actual capacities are not calculated. The upper support elevation is a drawing placeholder, not a surveyed coordinate. Swing moments are direction-swept; footing reactions and loaded-leg demand are not calculated because required stiffness, connection, and anchor data are absent. Red means an unverified legacy screen is exceeded; purple means demand or capacity is unverified; grey means below an unverified screen, not safe. No green safety rating is used. The ⅓ deterioration loss is your assumed allowance, not a measured condition assessment. See the point checks below.</div>
       </div>
     </div>
   </div>
@@ -95,8 +95,7 @@ button{font:inherit;padding:8px 11px;border-radius:9px;border:1px solid var(--li
   <div class="card" style="margin-top:14px">
     <div class="sectiontitle">Rear footing uplift screen</div>
     <div class="small">
-      Tower top is level. The gallows projects from the FRONT of the tower. Front tower legs are 3 ft longer than the rear legs over the 15 ft front-to-rear footing spacing. Red/orange arrows show the uplift-producing reaction at the actual REAR footing line, opposite the gallows. The displayed value is <strong>not net footing uplift</strong>: tower self-weight, footing/concrete weight, soil/rock restraint, guy-cable effects and anchor/rebar resistance are not subtracted because those values are not in the model. Swing direction is enveloped separately for each axis. Each rear footing is checked for 100% of the rear-line uplift component; a single-foot scenario also adds the transverse footing-line uplift component. No equal-split benefit is credited. These are separate load cases, not simultaneous footing reactions, and do not bound every possible frame-stiffness effect.
-    </div>
+      Swing-direction overturning moments are shown above. Individual footing uplift/compression reactions are <strong>not calculated</strong> because tower stiffness, guy-cable behavior, footing weight, anchor/rebar resistance and soil restraint are not modeled. Treat the shown moments as demand envelopes, not footing reactions.</div>
   </div>
 
   <div class="card" style="margin-top:14px">
@@ -153,6 +152,7 @@ function arrow(a,b,color,width=3){
 }
 
 const zTop=26, base=15, top=10, reach=99.5/12, beamZ=30, face=-5, cornerY=-5, tip=face-reach, lowerZ=beamZ-104.5/12, upperZ=34, footSpanFB=15, frontLegExtra=3;
+// upperZ=34 is a visualization placeholder, not a surveyed attachment coordinate.
 const ropeCount=2, ropeWeightEach=50, baselineLoss=1/3;
 // Legacy screens have no established engineering provenance; never label them safe.
 const legacyScreens={lowerBrace:940,handrail:343};
@@ -221,12 +221,7 @@ function draw(){
   arrow([-top/2,top/2,zTop],[-base/2,base/2,0],sec,secW*.55);
   arrow([top/2,top/2,zTop],[base/2,base/2,0],sec,secW*.42);
 
-  const upliftScale=Math.min(5,0.8+vals.rearLineUplift/250);
-  // Gallows projects from the FRONT (-X). Rear footing line is therefore +X.
-  // Red = rear footing on the same side of the tower as the gallows attachment.
-  // Orange = opposite rear footing. The foot directly below the gallows is FRONT, not rear.
-  arrow([ base/2,-base/2,0],[ base/2,-base/2,upliftScale],'#c43d3d',4);
-  arrow([ base/2, base/2,0],[ base/2, base/2,upliftScale],'#c58a00',2.5);
+  // Footing reactions are not drawn as force arrows; they are not calculated without support stiffness and anchor data.
   circle([ base/2,-base/2,0],6,pointColor(vals.points.rearFoot),'rear footing: unverified');
   circle([-base/2,-base/2,0],4,pointColor(vals.points.frontFoot),'front footing: unverified');
 
@@ -242,51 +237,64 @@ function calc(){
   const theta=Math.atan2(beamZ-lowerZ,reach);
   const upperSupportAngle=Math.atan2(upperZ-beamZ,reach);
   // Separate sole-support cases; no arbitrary 35% or 55% load sharing.
-  const brace=P/Math.sin(theta),upperAngle=P/Math.sin(upperSupportAngle);
-  const beam=Math.max(P/Math.tan(theta),P/Math.tan(upperSupportAngle));
-  // Triangle-inequality force allowance: all side demand at each checked point.
-  const braceDemand=brace+H,upperAngleDemand=upperAngle+H,topDemand=Math.hypot(P,beam)+H;
+  const brace=P/Math.sin(theta);
+  // Upper attachment height is not surveyed; suppress this force calculation.
+  const upperAngle=upperSupportGeometryVerified?P/Math.sin(upperSupportAngle):NaN;
+  const beam=P/Math.tan(theta);
+  // These are vertical-only scenario estimates, not a 3D frame solution.
+  const braceDemand=brace,upperAngleDemand=upperSupportGeometryVerified?upperAngle:NaN,topDemand=Math.hypot(P,beam);
   const cant=P*reach,localTorsion=H*reach;
   const ex=Math.abs(tip),ey=Math.abs(cornerY);
   const MvertX=P*ey,MvertY=P*ex,MvertResult=Math.hypot(MvertX,MvertY);
+  // Sweep horizontal swing direction at the actual tip; do not combine
+  // separately maximized axis components into a fictitious simultaneous case.
+  let MxCombined=0,MyCombined=0,MzSwing=0,MoverturnResult=0;
+  for(let i=0;i<360;i++){
+    const phi=2*Math.PI*i/360;
+    const Fx=H*Math.cos(phi),Fy=H*Math.sin(phi),Fz=-P;
+    const Mx=cornerY*Fz-beamZ*Fy;
+    const My=beamZ*Fx-tip*Fz;
+    const Mz=tip*Fy-cornerY*Fx;
+    MxCombined=Math.max(MxCombined,Math.abs(Mx));
+    MyCombined=Math.max(MyCombined,Math.abs(My));
+    MzSwing=Math.max(MzSwing,Math.abs(Mz));
+    MoverturnResult=Math.max(MoverturnResult,Math.hypot(Mx,My));
+  }
   const MsideOverturn=H*beamZ;
-  // Each axis maximum is a separate worst-direction swing case.
-  const MxCombined=MvertX+MsideOverturn,MyCombined=MvertY+MsideOverturn;
-  // Resultant maximum is NOT the hypot of separately maximized components.
-  const MoverturnResult=MvertResult+MsideOverturn;
-  const Tvertical=H*Math.hypot(ex,ey);
-  const rearLineUplift=MyCombined/footSpanFB,sideLineUplift=MxCombined/base;
-  const singleFootUplift=rearLineUplift+sideLineUplift;
-  const frontFootCompression=P+singleFootUplift;
+  // Footing reactions are not calculated: support stiffness, anchors, and
+  // tower self-weight are unknown, so moment envelopes are not foot forces.
+  const Tvertical=MzSwing;
+  const rearLineUplift=null,sideLineUplift=null,singleFootUplift=null,frontFootCompression=null;
   const points={};
   function point(key,name,demand,unit='lb',originalScreen=null){
-    points[key]={name,demand,unit,retention,
-      equivalentNewDemand:demand/retention,
+    const known=Number.isFinite(demand);
+    points[key]={name,demand:known?demand:null,unit,retention,
+      equivalentNewDemand:known?demand/retention:null,
       originalScreen,
       reducedScreen:originalScreen===null?null:originalScreen*retention};
   }
   point('ropeJoint','Ropes / tip attachment (combined)',R);
-  point('lowerBrace','Lower brace — sole-support case + side allowance',braceDemand,'lb',legacyScreens.lowerBrace);
+  point('lowerBrace','Lower brace — vertical-only scenario; combined demand unknown',braceDemand,'lb',legacyScreens.lowerBrace);
   point('lowerJoint','Lower brace bolts / welds',braceDemand);
-  point('loadedLeg','Loaded square-tube leg — force envelope',Math.max(braceDemand,topDemand,frontFootCompression));
-  point('upperAngle','Upper angle — sole-support case + side allowance',upperAngleDemand);
+  point('loadedLeg','Loaded square-tube leg — capacity/demand unverified',null);
+  point('upperAngle','Upper angle — attachment geometry/demand unverified',upperAngleDemand);
   point('upperJoint','Upper angle bolts / welds / roof joint',upperAngleDemand);
   point('roofFrame','Roof framing — upper-support case',upperAngleDemand);
-  point('handrail','Handrail — force envelope',topDemand,'lb',legacyScreens.handrail);
+  point('handrail','Handrail — vertical-only scenario; combined demand unknown',topDemand,'lb',legacyScreens.handrail);
   point('boomJoint','Boom / handrail bolts / welds',topDemand);
   point('boom','Gallows boom — both diagonals unavailable',cant,'ft-lb');
   point('boomSide','Gallows boom — side bending',localTorsion,'ft-lb');
   point('tower','Tower / neighboring legs / bracing — overturning',MoverturnResult,'ft-lb');
   point('towerTorsion','Tower connections / bracing — torsion',Tvertical,'ft-lb');
-  point('rearFoot','Each rear footing / anchors — single-foot uplift scenario',singleFootUplift);
-  point('frontFoot','Front footing / base joint — compression scenario',frontFootCompression);
+  point('rearFoot','Rear footing / anchors — reaction not calculated',null);
+  point('frontFoot','Front footing / base joint — reaction not calculated',null);
   return {W,D,S,ropeWeight,totalWeight,retention,P,H,R,brace,beam,upperAngle,
     braceDemand,upperAngleDemand,topDemand,cant,ex,ey,MvertX,MvertY,MvertResult,
     MsideOverturn,Tvertical,MxCombined,MyCombined,MoverturnResult,localTorsion,
     rearLineUplift,sideLineUplift,singleFootUplift,frontFootCompression,points};
 }
 function pointClass(p){
-  if(p.reducedScreen===null)return 'unknown';
+  if(p.demand===null||p.reducedScreen===null)return 'unknown';
   return p.demand>p.reducedScreen?'red':p.demand>=.8*p.reducedScreen?'orange':'';
 }
 function pointColor(p){return ({red:'#c43d3d',orange:'#c58a00',unknown:'#8a5a9b'})[pointClass(p)]||'#5f6b78';}
@@ -305,8 +313,8 @@ function update(){
     ['Vertical dynamic demand',v.P,'lb'],
     ['Side / swing demand',v.H,'lb'],
     ['Resultant tip demand',v.R,'lb'],
-    ['Lower brace — sole vertical support',v.brace,'lb'],
-    ['Upper angle — sole vertical support',v.upperAngle,'lb'],
+    ['Lower brace — vertical-only idealization',v.brace,'lb'],
+    ['Upper angle — geometry unverified',Number.isFinite(v.upperAngle)?v.upperAngle:null,'lb'],
     ['Boom axial-force envelope',v.beam,'lb'],
     ['Both diagonal supports lost — root bending',v.cant,'ft-lb'],
     ['Side bending at gallows root',v.localTorsion,'ft-lb'],
@@ -315,19 +323,20 @@ function update(){
     ['Vertical-load moment Mx',v.MvertX,'ft-lb'],
     ['Vertical-load moment My',v.MvertY,'ft-lb'],
     ['Vertical-load resultant moment',v.MvertResult,'ft-lb'],
-    ['Side-load overturning envelope',v.MsideOverturn,'ft-lb'],
+    ['Peak |Mx| over swing directions',v.MxCombined,'ft-lb'],
+    ['Peak |My| over swing directions',v.MyCombined,'ft-lb'],
+    ['Side-load overturning magnitude',v.MsideOverturn,'ft-lb'],
     ['Tower torsion — swing-direction envelope',v.Tvertical,'ft-lb'],
     ['Combined overturning — resultant envelope',v.MoverturnResult,'ft-lb'],
-    ['Rear footing-line uplift component',v.rearLineUplift,'lb'],
-    ['Transverse footing-line uplift component',v.sideLineUplift,'lb'],
-    ['Single-foot uplift scenario',v.singleFootUplift,'lb'],
+    ['Individual footing reactions',null,'not calculated'],
   ];
   document.getElementById('stats').innerHTML=rows.map(([name,val,unit])=>
-    `<div class="stat"><div>${name}</div><div class="value">${unit==='%'?val.toFixed(1):fmt(val)} ${unit}</div></div>`).join('');
+    `<div class="stat"><div>${name}</div><div class="value">${!Number.isFinite(val)?'NOT CALCULATED':unit==='%'?val.toFixed(1):fmt(val)} ${val===null?'':unit}</div></div>`).join('');
   document.getElementById('pointStats').innerHTML=Object.values(v.points).map(p=>{
-    const tag=p.reducedScreen===null?'CAPACITY UNVERIFIED':
+    const tag=p.demand===null?'DEMAND NOT CALCULATED':p.reducedScreen===null?'CAPACITY UNVERIFIED':
       `${p.demand>p.reducedScreen?'LEGACY SCREEN EXCEEDED':'Unverified legacy screen'}: ${fmt(p.reducedScreen)} ${p.unit} (original ${fmt(p.originalScreen)})`;
-    return `<div class="stat"><div>${p.name}<div class="small">${tag} · capacity retained ${(p.retention*100).toFixed(1)}%<br>Equivalent demand against original capacity: ${fmt(p.equivalentNewDemand)} ${p.unit}</div></div><div class="value ${pointClass(p)}">${fmt(p.demand)} ${p.unit}</div></div>`;
+    const equivalent=p.equivalentNewDemand===null?'Equivalent demand unavailable':`Equivalent demand against original capacity: ${fmt(p.equivalentNewDemand)} ${p.unit}`;
+    return `<div class="stat"><div>${p.name}<div class="small">${tag} · capacity retained ${(p.retention*100).toFixed(1)}%<br>${equivalent}</div></div><div class="value ${pointClass(p)}">${p.demand===null?'NOT CALCULATED':fmt(p.demand)+' '+p.unit}</div></div>`;
   }).join('');
   draw();
 }
